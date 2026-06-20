@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CGPA Calculator — Track Your Academic Progress</title>
+  <meta name="description" content="Free CGPA & GPA calculator for students. Add semesters, subjects, and grades to calculate your cumulative GPA instantly." />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --primary: #4f46e5;
+      --primary-dark: #3730a3;
+      --primary-light: #eef2ff;
+      --success: #059669;
+      --success-light: #ecfdf5;
+      --danger: #dc2626;
+      --border: #e5e7eb;
+      --bg: #f9fafb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --radius: 10px;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      color: #fff;
+      padding: 2.5rem 1rem 3rem;
+      text-align: center;
+    }
+    header h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p { margin-top: 0.5rem; opacity: 0.85; font-size: 1rem; }
+
+    .identity {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      opacity: 0.75;
+    }
+
+    /* ── Container ── */
+    .container {
+      max-width: 800px;
+      margin: -1.5rem auto 2rem;
+      padding: 0 1rem;
+    }
+
+    /* ── Summary Cards ── */
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    .summary-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1rem 1.25rem;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .summary-card .label { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+    .summary-card .value { font-size: 2rem; font-weight: 700; color: var(--primary); margin-top: 4px; }
+    .summary-card .value.good { color: var(--success); }
+    .summary-card .sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+    }
+    .card-title { font-size: 1rem; font-weight: 600; }
+    .semester-meta { font-size: 0.82rem; color: var(--muted); }
+
+    /* ── Table ── */
+    .subjects-table { width: 100%; border-collapse: collapse; }
+    .subjects-table th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      text-align: left;
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .subjects-table td { padding: 6px 8px; }
+    .subjects-table tr:not(:last-child) td { border-bottom: 1px solid #f3f4f6; }
+
+    input[type="text"], input[type="number"], select {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 0.875rem;
+      width: 100%;
+      background: #fff;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus, input[type="number"]:focus, select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79,70,229,0.12);
+    }
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 14px;
+      border-radius: 7px;
+      border: 1.5px solid transparent;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-outline { background: #fff; border-color: var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--bg); }
+    .btn-danger { background: #fff; border-color: #fca5a5; color: var(--danger); }
+    .btn-danger:hover { background: #fef2f2; }
+    .btn-sm { padding: 4px 10px; font-size: 0.78rem; }
+
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 0.75rem; }
+    .semester-actions { display: flex; gap: 8px; }
+
+    /* ── GPA badge ── */
+    .gpa-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.82rem;
+      font-weight: 600;
+    }
+    .gpa-badge.high { background: var(--success-light); color: var(--success); }
+    .gpa-badge.mid  { background: #fef9c3; color: #854d0e; }
+    .gpa-badge.low  { background: #fef2f2; color: var(--danger); }
+
+    /* ── Grade scale toggle ── */
+    .scale-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      flex-wrap: wrap;
+    }
+    .scale-toggle label { color: var(--muted); }
+    .toggle-group { display: flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+    .toggle-group button {
+      padding: 5px 14px;
+      border: none;
+      background: #fff;
+      font-size: 0.82rem;
+      cursor: pointer;
+      color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .toggle-group button.active { background: var(--primary); color: #fff; }
+
+    /* ── Grade ref ── */
+    .grade-ref {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 1rem;
+      background: var(--primary-light);
+      border-radius: 7px;
+      padding: 8px 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .grade-ref span { white-space: nowrap; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 1.5rem 1rem 2rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+      border-top: 1px solid var(--border);
+      margin-top: 1rem;
+    }
+    footer .identity-footer { margin-bottom: 0.75rem; font-size: 0.875rem; color: var(--text); font-weight: 500; }
+
+    .dh-btn {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 10px 22px;
+      background: linear-gradient(135deg, #4f46e5, #7c3aed);
+      color: #fff;
+      text-decoration: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .dh-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── Progress bar ── */
+    .progress-bar-wrap { background: #e5e7eb; border-radius: 99px; height: 6px; margin-top: 6px; overflow: hidden; }
+    .progress-bar { height: 100%; border-radius: 99px; background: var(--primary); transition: width 0.4s ease; }
+
+    /* ── Remove btn in table ── */
+    .remove-row { background: none; border: none; cursor: pointer; color: #d1d5db; font-size: 1.1rem; line-height: 1; transition: color 0.15s; }
+    .remove-row:hover { color: var(--danger); }
+
+    /* ── Responsive ── */
+    @media (max-width: 560px) {
+      .summary { grid-template-columns: 1fr 1fr; }
+      header h1 { font-size: 1.5rem; }
+      .subjects-table th:nth-child(3), .subjects-table td:nth-child(3) { display: none; }
+    }
+
+    .empty-state { text-align: center; padding: 1.5rem; color: var(--muted); font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🎓 CGPA Calculator</h1>
+  <p>Track your semester GPA and cumulative CGPA in one place</p>
+  <div class="identity">Made by <strong>Harshita Apankar</strong> &nbsp;·&nbsp; harshitaapankar@gmail.com</div>
+</header>
+
+<div class="container">
+
+  <!-- Summary -->
+  <div class="summary">
+    <div class="summary-card">
+      <div class="label">CGPA</div>
+      <div class="value good" id="cgpa-val">—</div>
+      <div class="sub" id="cgpa-sub">Add subjects</div>
+      <div class="progress-bar-wrap"><div class="progress-bar" id="cgpa-bar" style="width:0%"></div></div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Total Credits</div>
+      <div class="value" id="total-credits">0</div>
+      <div class="sub" id="sem-count">0 semesters</div>
+    </div>
+    <div class="summary-card">
+      <div class="label">Grade</div>
+      <div class="value" id="letter-grade">—</div>
+      <div class="sub" id="grade-desc">—</div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="card">
+    <div class="scale-toggle">
+      <label>Grading scale:</label>
+      <div class="toggle-group">
+        <button class="active" onclick="setScale('10')" id="s10">10-point</button>
+        <button onclick="setScale('4')" id="s4">4-point (US)</button>
+        <button onclick="setScale('percentage')" id="sp">Percentage</button>
+      </div>
+    </div>
+    <div class="grade-ref" id="grade-ref">
+      <span>O = 10</span><span>A+ = 9</span><span>A = 8</span><span>B+ = 7</span><span>B = 6</span><span>C = 5</span><span>F = 0</span>
+    </div>
+  </div>
+
+  <!-- Semesters container -->
+  <div id="semesters-container"></div>
+
+  <!-- Add semester -->
+  <div style="text-align:center; margin-bottom: 2rem;">
+    <button class="btn btn-primary" onclick="addSemester()">+ Add Semester</button>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="identity-footer">Harshita Apankar &nbsp;·&nbsp; harshitaapankar@gmail.com</div>
+  <div>Free tool — no signup, no data stored, works offline</div>
+  <br>
+  <a href="https://digitalheroesco.com" target="_blank" rel="noopener" class="dh-btn">Built for Digital Heroes</a>
+  <br><br>
+  <div>© 2025 Harshita Apankar</div>
+</footer>
+
+<script>
+let scale = '10';
+let semesters = [];
+let semId = 0;
+
+const gradeScales = {
+  '10': {
+    options: ['O (10)', 'A+ (9)', 'A (8)', 'B+ (7)', 'B (6)', 'C (5)', 'F (0)'],
+    points:  [10, 9, 8, 7, 6, 5, 0],
+    ref: '<span>O = 10</span><span>A+ = 9</span><span>A = 8</span><span>B+ = 7</span><span>B = 6</span><span>C = 5</span><span>F = 0</span>',
+    max: 10
+  },
+  '4': {
+    options: ['A (4.0)', 'A- (3.7)', 'B+ (3.3)', 'B (3.0)', 'B- (2.7)', 'C+ (2.3)', 'C (2.0)', 'D (1.0)', 'F (0.0)'],
+    points:  [4.0, 3.7, 3.3, 3.0, 2.7, 2.3, 2.0, 1.0, 0.0],
+    ref: '<span>A = 4.0</span><span>A- = 3.7</span><span>B+ = 3.3</span><span>B = 3.0</span><span>C = 2.0</span><span>D = 1.0</span><span>F = 0</span>',
+    max: 4
+  },
+  'percentage': {
+    options: [],
+    points:  [],
+    ref: '<span>Enter percentage marks (0–100)</span>',
+    max: 100
+  }
+};
+
+function setScale(s) {
+  scale = s;
+  ['10','4','percentage'].forEach(x => {
+    document.getElementById(x === '10' ? 's10' : x === '4' ? 's4' : 'sp').classList.toggle('active', x === s);
+  });
+  document.getElementById('grade-ref').innerHTML = gradeScales[s].ref;
+  renderAll();
+  recalcAll();
+}
+
+function addSemester() {
+  const id = ++semId;
+  semesters.push({ id, name: 'Semester ' + id, subjects: [] });
+  renderAll();
+  addSubjectRow(id);
+}
+
+function removeSemester(id) {
+  semesters = semesters.filter(s => s.id !== id);
+  renderAll();
+  recalcAll();
+}
+
+function addSubjectRow(semId) {
+  const sem = semesters.find(s => s.id === semId);
+  if (!sem) return;
+  const subId = Date.now();
+  sem.subjects.push({ id: subId, name: '', credits: '', grade: '' });
+  renderSemester(sem);
+}
+
+function removeSubjectRow(semId, subId) {
+  const sem = semesters.find(s => s.id === semId);
+  if (!sem) return;
+  sem.subjects = sem.subjects.filter(s => s.id !== subId);
+  renderSemester(sem);
+  recalcAll();
+}
+
+function renderAll() {
+  const container = document.getElementById('semesters-container');
+  container.innerHTML = '';
+  semesters.forEach(sem => {
+    const div = document.createElement('div');
+    div.id = 'sem-' + sem.id;
+    container.appendChild(div);
+    renderSemester(sem);
+  });
+}
+
+function renderSemester(sem) {
+  const wrap = document.getElementById('sem-' + sem.id);
+  if (!wrap) return;
+
+  const scaleInfo = gradeScales[scale];
+  const gradeInput = scale === 'percentage'
+    ? `<input type="number" min="0" max="100" step="0.01" placeholder="0–100" style="width:90px" onchange="updateSubject(${sem.id},this.dataset.subid,'grade',this.value)" />`
+    : null;
+
+  const rows = sem.subjects.map(sub => {
+    const gradeCell = scale === 'percentage'
+      ? `<input type="number" min="0" max="100" step="0.01" placeholder="0–100" style="width:90px" value="${sub.grade}" data-subid="${sub.id}" onchange="updateSubject(${sem.id},${sub.id},'grade',this.value)" />`
+      : `<select data-subid="${sub.id}" onchange="updateSubject(${sem.id},${sub.id},'grade',this.value)">
+          <option value="">— Grade —</option>
+          ${scaleInfo.options.map((o,i) => `<option value="${scaleInfo.points[i]}" ${parseFloat(sub.grade) === scaleInfo.points[i] ? 'selected' : ''}>${o}</option>`).join('')}
+        </select>`;
+    return `<tr>
+      <td><input type="text" placeholder="Subject name" value="${sub.name}" onchange="updateSubject(${sem.id},${sub.id},'name',this.value)" /></td>
+      <td><input type="number" min="0" max="10" step="0.5" placeholder="Credits" style="width:70px" value="${sub.credits}" onchange="updateSubject(${sem.id},${sub.id},'credits',this.value)" /></td>
+      <td>${gradeCell}</td>
+      <td><button class="remove-row" onclick="removeSubjectRow(${sem.id},${sub.id})" title="Remove">✕</button></td>
+    </tr>`;
+  }).join('');
+
+  const semGPA = calcSemGPA(sem);
+  const badge = semGPA !== null ? `<span class="gpa-badge ${semGPA >= 7 || (scale==='4' && semGPA>=3) || (scale==='percentage' && semGPA>=70) ? 'high' : semGPA >= 5 ? 'mid' : 'low'}">GPA: ${semGPA.toFixed(2)}</span>` : '';
+
+  wrap.innerHTML = `
+    <div class="card">
+      <div class="card-header">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <input type="text" value="${sem.name}" style="font-weight:600;font-size:1rem;border:none;background:transparent;outline:none;width:140px;padding:0;color:var(--text)" onchange="updateSemName(${sem.id},this.value)" />
+          ${badge}
+        </div>
+        <div class="semester-actions">
+          <button class="btn btn-outline btn-sm" onclick="addSubjectRow(${sem.id})">+ Subject</button>
+          <button class="btn btn-danger btn-sm" onclick="removeSemester(${sem.id})">Remove</button>
+        </div>
+      </div>
+      <table class="subjects-table">
+        <thead>
+          <tr>
+            <th>Subject</th>
+            <th>Credits</th>
+            <th>Grade</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows || '<tr><td colspan="4" class="empty-state">No subjects yet</td></tr>'}</tbody>
+      </table>
+    </div>`;
+
+  recalcAll();
+}
+
+function updateSubject(semId, subId, field, value) {
+  const sem = semesters.find(s => s.id === semId);
+  if (!sem) return;
+  const sub = sem.subjects.find(s => s.id === subId);
+  if (!sub) return;
+  sub[field] = value;
+  recalcAll();
+  const badge = calcSemGPA(sem);
+  const badgeEl = document.querySelector(`#sem-${semId} .gpa-badge`);
+  if (badge !== null && badgeEl) {
+    badgeEl.textContent = 'GPA: ' + badge.toFixed(2);
+    badgeEl.className = `gpa-badge ${badge >= 7 || (scale==='4' && badge>=3) || (scale==='percentage' && badge>=70) ? 'high' : badge >= 5 ? 'mid' : 'low'}`;
+  } else if (badge !== null) {
+    renderSemester(sem);
+  }
+}
+
+function updateSemName(id, name) {
+  const sem = semesters.find(s => s.id === id);
+  if (sem) sem.name = name;
+}
+
+function calcSemGPA(sem) {
+  let totalPoints = 0, totalCredits = 0;
+  for (const sub of sem.subjects) {
+    const c = parseFloat(sub.credits);
+    const g = parseFloat(sub.grade);
+    if (!isNaN(c) && c > 0 && !isNaN(g)) {
+      totalPoints += c * g;
+      totalCredits += c;
+    }
+  }
+  return totalCredits > 0 ? totalPoints / totalCredits : null;
+}
+
+function recalcAll() {
+  let totalPoints = 0, totalCredits = 0;
+  for (const sem of semesters) {
+    for (const sub of sem.subjects) {
+      const c = parseFloat(sub.credits);
+      const g = parseFloat(sub.grade);
+      if (!isNaN(c) && c > 0 && !isNaN(g)) {
+        totalPoints += c * g;
+        totalCredits += c;
+      }
+    }
+  }
+  const cgpa = totalCredits > 0 ? totalPoints / totalCredits : null;
+  const max = gradeScales[scale].max;
+
+  document.getElementById('total-credits').textContent = totalCredits || 0;
+  document.getElementById('sem-count').textContent = semesters.length + ' semester' + (semesters.length !== 1 ? 's' : '');
+
+  if (cgpa !== null) {
+    const pct = (cgpa / max) * 100;
+    document.getElementById('cgpa-val').textContent = cgpa.toFixed(2);
+    document.getElementById('cgpa-sub').textContent = 'out of ' + max;
+    document.getElementById('cgpa-bar').style.width = Math.min(pct, 100) + '%';
+    const { letter, desc } = getLetterGrade(cgpa, scale);
+    document.getElementById('letter-grade').textContent = letter;
+    document.getElementById('grade-desc').textContent = desc;
+  } else {
+    document.getElementById('cgpa-val').textContent = '—';
+    document.getElementById('cgpa-sub').textContent = 'Add subjects';
+    document.getElementById('cgpa-bar').style.width = '0%';
+    document.getElementById('letter-grade').textContent = '—';
+    document.getElementById('grade-desc').textContent = '—';
+  }
+}
+
+function getLetterGrade(cgpa, scale) {
+  if (scale === '10') {
+    if (cgpa >= 9) return { letter: 'O', desc: 'Outstanding' };
+    if (cgpa >= 8) return { letter: 'A+', desc: 'Excellent' };
+    if (cgpa >= 7) return { letter: 'A', desc: 'Very Good' };
+    if (cgpa >= 6) return { letter: 'B+', desc: 'Good' };
+    if (cgpa >= 5) return { letter: 'B', desc: 'Above Average' };
+    if (cgpa >= 4) return { letter: 'C', desc: 'Average' };
+    return { letter: 'F', desc: 'Fail' };
+  }
+  if (scale === '4') {
+    if (cgpa >= 3.7) return { letter: 'A', desc: 'Excellent' };
+    if (cgpa >= 3.3) return { letter: 'A-/B+', desc: 'Very Good' };
+    if (cgpa >= 3.0) return { letter: 'B', desc: 'Good' };
+    if (cgpa >= 2.0) return { letter: 'C', desc: 'Average' };
+    if (cgpa >= 1.0) return { letter: 'D', desc: 'Below Avg' };
+    return { letter: 'F', desc: 'Fail' };
+  }
+  if (cgpa >= 90) return { letter: 'A+', desc: 'Outstanding' };
+  if (cgpa >= 75) return { letter: 'A', desc: 'Distinction' };
+  if (cgpa >= 60) return { letter: 'B', desc: 'First Class' };
+  if (cgpa >= 50) return { letter: 'C', desc: 'Second Class' };
+  if (cgpa >= 40) return { letter: 'D', desc: 'Pass' };
+  return { letter: 'F', desc: 'Fail' };
+}
+
+// Start with one semester
+addSemester();
+</script>
+</body>
+</html>
